@@ -1,21 +1,16 @@
 # import the necessary packages
+# this code was copied from https://www.pyimagesearch.com/2016/01/11/opencv-panorama-stitching/
 from stitcher import Stitcher
 import argparse
 import imutils
 import cv2
 
-# construct the argument parse and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-f", "--first", required=True,
-                help="path to the first image")
-ap.add_argument("-s", "--second", required=True,
-                help="path to the second image")
-args = vars(ap.parse_args())
+
 
 # load the two images and resize them to have a width of 400 pixels
 # (for faster processing)
-imageA = cv2.imread(args["first"])
-imageB = cv2.imread(args["second"])
+imageA = cv2.imread('piece1.png')
+imageB = cv2.imread('piece2.png')
 imageA = imutils.resize(imageA, width=400)
 imageB = imutils.resize(imageB, width=400)
 

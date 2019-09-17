@@ -1,4 +1,4 @@
-
+# this code was copied from https://www.pyimagesearch.com/2016/01/11/opencv-panorama-stitching/
 import numpy as np
 import imutils
 import cv2
