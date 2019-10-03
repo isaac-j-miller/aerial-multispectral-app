@@ -47,10 +47,11 @@ equations = {
 
 colormaps = {
     'ndvi': 'rainbow_r',
-    'ndre': 'Spectral'
+    'ndre': 'Spectral',
+    'dsm': 'terrain'
 }
 
-bandNames = ['blue', 'green', 'red', 'nir', 'red_edge']
+bandNames = ['blue', 'green', 'red', 'nir', 'red_edge', 'lwir']
 
 
 def split_stack(filename):
@@ -111,7 +112,7 @@ def generate_from_separate(files, indexlist, outputpath, outputbase):
         masked = np.ma.masked_invalid(indexdata)
         print('minmax:', np.min(masked), np.max(masked))
         adj, mn, mx = normalize(masked)
-        c = v(masked)
+        c = v(adj)
         print(c.shape)
         c = np.transpose(c, (2, 0, 1))
         print(c.shape)
@@ -142,7 +143,7 @@ def generate_from_separate(files, indexlist, outputpath, outputbase):
     return names
 
 
-def generate_from_one(file, indexlist, outputpath, outputbase):
+def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True):
     base = gdal.Open(file)
     trans = base.GetGeoTransform()
     projection = base.GetProjection()
@@ -162,39 +163,102 @@ def generate_from_one(file, indexlist, outputpath, outputbase):
         indexdata = equations[index](bands)
         #  colormap testing
         print('beginning colormap stuff...')
-        v = cm.get_cmap(colormaps[index], 256)
-
         masked = np.ma.masked_invalid(indexdata)
-        print('minmax:', np.min(masked), np.max(masked))
-        adj, mn, mx = normalize(masked)
-        c = v(masked)
-        print(c.shape)
-        c = np.transpose(c, (2, 0, 1))
-        print(c.shape)
-        c *= 255
-        c = c.astype(int)
-        print(np.min(c[0]), np.max(c[0]), np.mean(c[0]))
-        print('minmax:',mn,mx)
-        norm = colors.Normalize(vmin=mn,vmax=mx)
-        fig, ax = plt.subplots(figsize=(1, 6),constrained_layout=True)
-        cb = cbar.ColorbarBase(ax, v, norm)
-        cb.set_label(index.upper(), rotation=90)
+        outputname = os.path.join(outputpath, outputbase + '_' + index + '.tif')
+        if colormap:
+            v = cm.get_cmap(colormaps[index], 256)
+            print('minmax:', np.min(masked), np.max(masked))
+            adj, mn, mx = normalize(masked)
+            c = v(adj)
+            print(c.shape)
+            c = np.transpose(c, (2, 0, 1))
+            print(c.shape)
+            c *= 255
+            c = c.astype(int)
+            print(np.min(c[0]), np.max(c[0]), np.mean(c[0]))
+            print('minmax:',mn,mx)
+            norm = colors.Normalize(vmin=mn,vmax=mx)
 
-        scalename = os.path.join(outputpath, outputbase + '_'+index+'_scale.png')
-        fig.savefig(scalename)
-        print('ending colormap stuff...')
-        #  end test
-        outputname = os.path.join(outputpath, outputbase + '_'+index+'.tif')
-        names.append(outputname)
-        options = ['PHOTOMETRIC=RGB', 'PROFILE=GeoTIFF']
-        out = driver.Create(outputname, cols, rows, 4, gdal.GDT_Byte, options=options)
-        out.SetGeoTransform(trans)
-        out.SetProjection(projection)
-        for band, i in zip(c, range(1,5)):
-            out.GetRasterBand(i).WriteArray(band)
+            fig, ax = plt.subplots(figsize=(1, 6),constrained_layout=True)
+            plt.close()
+            cb = cbar.ColorbarBase(ax, v, norm)
+            cb.set_label(index.upper(), rotation=90)
+
+            scalename = os.path.join(outputpath, outputbase + '_'+index+'_scale.png')
+            fig.savefig(scalename)
+            print('ending colormap stuff...')
+            #  end test
+
+            names.append([outputname, scalename])
+            options = ['PHOTOMETRIC=RGB', 'PROFILE=GeoTIFF']
+            out = driver.Create(outputname, cols, rows, 4, gdal.GDT_Byte, options=options)
+            out.SetGeoTransform(trans)
+            out.SetProjection(projection)
+            for band, i in zip(c, range(1, 5)):
+                out.GetRasterBand(i).WriteArray(band)
+        else:
+            names.append([outputname, None])
+            options = ['PROFILE=GeoTIFF']
+            out = driver.Create(outputname, cols, rows, 1, gdal.GDT_Float32, options=options)
+            out.GetRasterBand(1).WriteArray(masked.filled(-10000))
+
         print('saving...')
         out.FlushCache()
         del out
+    return names
+
+
+def colormap_dsm(file,outputpath,outputbase, colormap=colormaps['dsm']):
+
+    base = gdal.Open(file)
+    trans = base.GetGeoTransform()
+    projection = base.GetProjection()
+    data = base.ReadAsArray()
+    data = np.array(data, dtype='float32')
+    masked = np.ma.masked_where(data < -2000, data)
+    rows, cols = data.shape
+    names = []
+    driver = gdal.GetDriverByName('GTiff')
+    #masked = np.ma.masked_invalid(data)
+    try:
+        v = cm.get_cmap(colormap, 256)
+    except ValueError:
+        print('invalid colormap. using "terrain" instead')
+        colormap = colormaps['dsm']
+        v = cm.get_cmap(colormap, 256)
+
+    print('minmax:', np.min(masked), np.max(masked))
+    adj, mn, mx = normalize(masked)
+    #plt.imshow(adj)
+    c = v(adj)
+    print(c.shape)
+    c = np.transpose(c, (2, 0, 1))
+    print(c.shape)
+    c *= 255
+    c = c.astype(int)
+    print(np.min(c[0]), np.max(c[0]), np.mean(c[0]))
+
+    print('minmax:', mn, mx)
+    norm = colors.Normalize(vmin=mn, vmax=mx)
+
+    fig, ax = plt.subplots(figsize=(1, 6),constrained_layout=True)
+    plt.close()
+    cb = cbar.ColorbarBase(ax, v, norm)
+    cb.set_label('Elevation (m)', rotation=90)
+    outputname = os.path.join(outputpath, outputbase + '_dsm.tif')
+    scalename = os.path.join(outputpath, outputbase + '_dsm_scale.png')
+    fig.savefig(scalename)
+    print('ending colormap stuff...')
+    #  end test
+
+    names = [outputname, scalename]
+    options = ['PHOTOMETRIC=RGB', 'PROFILE=GeoTIFF']
+    out = driver.Create(outputname, cols, rows, 4, gdal.GDT_Byte, options=options)
+    out.SetGeoTransform(trans)
+    out.SetProjection(projection)
+    for band, i in zip(c, range(1, 5)):
+        out.GetRasterBand(i).WriteArray(band)
+    out.FlushCache()
     return names
 
 if __name__ == '__main__':
@@ -203,14 +267,13 @@ if __name__ == '__main__':
     #         'test1_transparent_mosaic_red.tif',
     #        'test1_transparent_mosaic_nir.tif',
     #        'test1_transparent_mosaic_red edge.tif']
-    files = ['blenheim_test_index_blue.tif',
-             'blenheim_test_index_green.tif',
-             'blenheim_test_index_red.tif',
-             'blenheim_test_index_nir.tif',
-             'blenheim_test_index_red_edge.tif']
+    #files = ['blenheim_test_index_blue.tif',
+    #         'blenheim_test_index_green.tif',
+    #         'blenheim_test_index_red.tif',
+    #         'blenheim_test_index_nir.tif',
+    #         'blenheim_test_index_red_edge.tif']
+    #fnames = generate_from_separate(files, ['ndvi', 'ndre'],'','test')  # this is the old format that uses separate source files
 
-    #fnames = generate_from_separate(files, ['ndvi', 'ndre'],'','test')
-    fnames = generate_from_one('ortho.tif', ['ndvi', 'ndre'],'','test')
-    d = gdal.Open(fnames[0])
-    print(d.GetProjection())
-    print(d.GetGeoTransform())
+    fnames = generate_from_stack('test_ortho.tif', ['ndvi', 'ndre'], os.getcwd(), 'test')
+    dsmname = colormap_dsm('test_dem.tif', os.getcwd(), 'test1')
+    print(fnames, dsmname)
