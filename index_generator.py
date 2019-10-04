@@ -146,7 +146,12 @@ def generate_from_separate(files, indexlist, outputpath, outputbase):  # functio
     return names
 
 
-def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True, units='F'):  # units can be F or C. units only used for thermal
+def generate_from_stack(file, indexdict, outputpath, outputbase, colormap=True, units='F'):  # units can be F or C. units only used for thermal
+    try:
+        indexlist = indexdict.keys()
+    except AttributeError:
+        indexlist = indexdict
+        indexdict = colormaps
     start_time = dt.now()
     print('stack analysis started at ', start_time)
     base = gdal.Open(file)
@@ -165,7 +170,7 @@ def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True, 
         del temp
 
     for index in indexlist:
-
+        print('beginning analysis on',index,'...')
         indexdata = equations[index](bands)
         if index == 'thermal':
             if units == 'F':
@@ -181,7 +186,11 @@ def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True, 
         outputname = os.path.join(outputpath, outputbase + '_' + index + '.tif')
         if colormap:
             print('beginning colormap stuff...')
-            v = cm.get_cmap(colormaps[index], 256)
+            try:
+                v = cm.get_cmap(indexdict[index], 256)
+            except ValueError:
+                v = cm.get_cmap(colormaps[index], 256)
+                print('invalid colormap. using default from colormaps')
             print('minmax:', np.min(masked), np.max(masked))
             adj, mn, mx = normalize(masked)
             c = v(adj)
@@ -221,7 +230,6 @@ def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True, 
             print('saving...')
             out.FlushCache()
 
-
         del out
         end_time = dt.now()
         print('stack analysis ended at ', end_time)
@@ -258,19 +266,22 @@ def gen_rgb(file, outputpath, outputbase):
     return outputname
 
 
-def colormap_dsm(file, outputpath, outputbase, colormap=colormaps['dsm'], units='m'):  # units can be 'ft' or 'm'
-
+def colormap_tif(file, outputpath, outputbase, dataname, colormap=colormaps['dsm'], units='m'):  # units can be 'ft' or 'm'
     base = gdal.Open(file)
     trans = base.GetGeoTransform()
     projection = base.GetProjection()
     data = base.ReadAsArray()
     data = np.array(data, dtype='float32')
     masked = np.ma.masked_where(data < -2000, data)
-    if units == 'ft':
-        masked *= 3.2808
-        label = 'Elevation (ft)'
+    if dataname == 'dsm':
+        if units == 'ft':
+            masked *= 3.2808
+            label = 'Elevation (ft)'
+        else:
+            label = 'Elevation (m)'
     else:
-        label = 'Elevation (m)'
+        label = dataname.upper()
+
     rows, cols = data.shape
     driver = gdal.GetDriverByName('GTiff')
     try:
@@ -297,8 +308,8 @@ def colormap_dsm(file, outputpath, outputbase, colormap=colormaps['dsm'], units=
     plt.close()
     cb = cbar.ColorbarBase(ax, v, norm)
     cb.set_label(label=label, rotation=90)
-    outputname = os.path.join(outputpath, outputbase + '_dsm.tif')
-    scalename = os.path.join(outputpath, outputbase + '_dsm_scale.png')
+    outputname = os.path.join(outputpath, outputbase + '_'+dataname+'.tif')
+    scalename = os.path.join(outputpath, outputbase + '_'+dataname+'_scale.png')
     fig.savefig(scalename)
     print('ending colormap stuff...')
 
@@ -314,8 +325,9 @@ def colormap_dsm(file, outputpath, outputbase, colormap=colormaps['dsm'], units=
 
 
 if __name__ == '__main__':
-    #fnames = generate_from_stack('test_ortho.tif', ['thermal'], os.getcwd(), 'test_colored', units='F')
+    fnames = generate_from_stack('test_ortho.tif', {'thermal':'CMRmap','ndvi':'gnuplot2','ndre':'Spectral'}, os.getcwd(), 'test_colored', units='C')
     #fnames2 = generate_from_stack('test_ortho.tif', ['thermal'], os.getcwd(), 'test_no_color', colormap=False)
-    rgb = gen_rgb('test_ortho.tif', os.getcwd(),'test')
+    #rgb = gen_rgb('test_ortho.tif', os.getcwd(),'test')
+    #ndre = colormap_tif('test_no_color_ndvi.tif', os.getcwd(), 'colormap_test', '', 'cubehelix')
     #dsmname = colormap_dsm('test_dem.tif', os.getcwd(), 'test1')
     #print(fnames, dsmname)
