@@ -27,8 +27,10 @@ def gen_ndre(bands):
     return calc_index(numerator, denominator)
 
 
-def gen_lwir(bands):
-    return bands['lwir']
+def gen_thermal(bands):
+    dat = bands['lwir']
+    dat = np.ma.masked_where(dat == 0, dat)
+    return dat/100 - 273.15
 
 
 def adjust(arr):
@@ -43,12 +45,14 @@ def normalize(arr):
 
 equations = {
     'ndvi': gen_ndvi,
-    'ndre': gen_ndre
+    'ndre': gen_ndre,
+    'thermal': gen_thermal
 }
 
 colormaps = {
     'ndvi': 'Spectral',
     'ndre': 'Spectral',
+    'thermal': 'CMRmap',
     'dsm': 'terrain'
 }
 
@@ -142,7 +146,7 @@ def generate_from_separate(files, indexlist, outputpath, outputbase):  # functio
     return names
 
 
-def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True):
+def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True, units='F'):  # units can be F or C. units only used for thermal
     start_time = dt.now()
     print('stack analysis started at ', start_time)
     base = gdal.Open(file)
@@ -161,7 +165,16 @@ def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True):
         del temp
 
     for index in indexlist:
+
         indexdata = equations[index](bands)
+        if index == 'thermal':
+            if units == 'F':
+                indexdata = indexdata*9 / 5 + 32
+                label = 'Temperature (' + u'\N{DEGREE SIGN}' + 'F)'
+            else:
+                label = 'Temperature (' + u'\N{DEGREE SIGN}' + 'C)'
+        else:
+            label = index.upper()
 
         masked = np.ma.masked_invalid(indexdata)
         print(masked.shape)
@@ -184,7 +197,8 @@ def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True):
             fig, ax = plt.subplots(figsize=(1, 6), constrained_layout=True)
             plt.close()
             cb = cbar.ColorbarBase(ax, v, norm)
-            cb.set_label(index.upper(), rotation=90)
+
+            cb.set_label(label=label, rotation=90)
 
             scalename = os.path.join(outputpath, outputbase + '_'+index+'_scale.png')
             fig.savefig(scalename)
@@ -215,7 +229,36 @@ def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True):
     return names
 
 
-def colormap_dsm(file, outputpath, outputbase, colormap=colormaps['dsm']):
+def gen_rgb(file, outputpath, outputbase):
+    start_time = dt.now()
+    print('stack analysis started at ', start_time)
+    base = gdal.Open(file)
+    trans = base.GetGeoTransform()
+    projection = base.GetProjection()
+    data = base.ReadAsArray()[:3][::-1]
+    rows, cols = data[0].shape
+    driver = gdal.GetDriverByName('GTiff')
+
+    outputname = os.path.join(outputpath, outputbase + '_rgb.tif')
+
+    options = ['PHOTOMETRIC=RGB', 'PROFILE=GeoTIFF']
+    out = driver.Create(outputname, cols, rows, 3, gdal.GDT_Byte, options=options)
+    out.SetGeoTransform(trans)
+    out.SetProjection(projection)
+    for band, i in zip(data, range(1, 4)):
+        band = np.asarray(band, dtype='float32')*255.0/16934.0
+        out.GetRasterBand(i).WriteArray(band)
+    print('saving...')
+    out.FlushCache()
+
+    del out
+    end_time = dt.now()
+    print('stack analysis ended at ', end_time)
+    print('total time to analyze:', end_time - start_time)
+    return outputname
+
+
+def colormap_dsm(file, outputpath, outputbase, colormap=colormaps['dsm'], units='m'):  # units can be 'ft' or 'm'
 
     base = gdal.Open(file)
     trans = base.GetGeoTransform()
@@ -223,6 +266,11 @@ def colormap_dsm(file, outputpath, outputbase, colormap=colormaps['dsm']):
     data = base.ReadAsArray()
     data = np.array(data, dtype='float32')
     masked = np.ma.masked_where(data < -2000, data)
+    if units == 'ft':
+        masked *= 3.2808
+        label = 'Elevation (ft)'
+    else:
+        label = 'Elevation (m)'
     rows, cols = data.shape
     driver = gdal.GetDriverByName('GTiff')
     try:
@@ -248,7 +296,7 @@ def colormap_dsm(file, outputpath, outputbase, colormap=colormaps['dsm']):
     fig, ax = plt.subplots(figsize=(1, 6), constrained_layout=True)
     plt.close()
     cb = cbar.ColorbarBase(ax, v, norm)
-    cb.set_label('Elevation (m)', rotation=90)
+    cb.set_label(label=label, rotation=90)
     outputname = os.path.join(outputpath, outputbase + '_dsm.tif')
     scalename = os.path.join(outputpath, outputbase + '_dsm_scale.png')
     fig.savefig(scalename)
@@ -266,7 +314,8 @@ def colormap_dsm(file, outputpath, outputbase, colormap=colormaps['dsm']):
 
 
 if __name__ == '__main__':
-    fnames = generate_from_stack('test_purcell_ortho.tif', ['ndvi', 'ndre'], os.getcwd(), 'test_colored')
-    fnames2 = generate_from_stack('test_purcell_ortho.tif', ['ndvi', 'ndre'], os.getcwd(), 'test_no_color', colormap=False)
-    dsmname = colormap_dsm('test_purcell_dem.tif', os.getcwd(), 'test1')
+    #fnames = generate_from_stack('test_ortho.tif', ['thermal'], os.getcwd(), 'test_colored', units='F')
+    #fnames2 = generate_from_stack('test_ortho.tif', ['thermal'], os.getcwd(), 'test_no_color', colormap=False)
+    rgb = gen_rgb('test_ortho.tif', os.getcwd(),'test')
+    #dsmname = colormap_dsm('test_dem.tif', os.getcwd(), 'test1')
     #print(fnames, dsmname)

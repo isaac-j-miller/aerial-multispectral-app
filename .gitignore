@@ -2227,3 +2227,8 @@ test_ortho.tif
 *.tif
 *.tif
 *.zip
+micasensestitcher.py
+scratch.py
+*.png
+*.png
+*.tif
