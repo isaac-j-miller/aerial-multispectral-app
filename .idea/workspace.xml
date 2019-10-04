@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="316c8cd2-9e40-4cdc-9bc3-eed5f424424e" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/index_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/index_generator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/metashape_stitcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/metashape_stitcher.py" afterDir="false" />
     </list>
@@ -39,7 +38,7 @@
           <entry key="index_generator" value="469" />
           <entry key="metashape_stitcher" value="16" />
           <entry key="micasense" value="233" />
-          <entry key="py" value="15177" />
+          <entry key="py" value="16486" />
           <entry key="stitcher driver" value="445" />
           <entry key="txt" value="454" />
         </counts>
@@ -47,7 +46,7 @@
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="454" />
-          <entry key="Python" value="16409" />
+          <entry key="Python" value="17718" />
         </counts>
       </usages-collector>
     </session>
@@ -67,27 +66,28 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/metashape_stitcher.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-657">
-              <caret line="20" column="57" selection-start-line="20" selection-start-column="57" selection-end-line="20" selection-end-column="57" />
+            <state relative-caret-position="6">
+              <caret line="36" column="75" selection-start-line="36" selection-start-column="75" selection-end-line="36" selection-end-column="75" />
               <folding>
-                <marker date="1570137763168" expanded="true" signature="448:449" ph="..." />
+                <marker date="1570152223562" expanded="true" signature="638:639" ph="..." />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/index_generator.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="261">
-              <caret line="275" lean-forward="true" selection-start-line="275" selection-end-line="275" />
+            <state relative-caret-position="91">
+              <caret line="195" column="44" lean-forward="true" selection-start-line="195" selection-start-column="44" selection-end-line="195" selection-end-column="44" />
               <folding>
                 <element signature="e#0#11#0" expanded="true" />
-                <element signature="e#1895#4203#0" />
-                <marker date="1570138275535" expanded="true" signature="6749:8424" ph="..." />
+                <element signature="e#1137#1842#0" />
+                <element signature="e#1958#4218#0" />
+                <marker date="1570151718995" expanded="true" signature="6733:8317" ph="..." />
               </folding>
             </state>
           </provider>
@@ -137,8 +137,8 @@
         <option value="$PROJECT_DIR$/Calibration.py" />
         <option value="$PROJECT_DIR$/scratch.py" />
         <option value="$PROJECT_DIR$/micasensestitcher.py" />
-        <option value="$PROJECT_DIR$/metashape_stitcher.py" />
         <option value="$PROJECT_DIR$/index_generator.py" />
+        <option value="$PROJECT_DIR$/metashape_stitcher.py" />
       </list>
     </option>
   </component>
@@ -206,7 +206,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.index_generator">
+  <component name="RunManager" selected="Python.metashape_stitcher">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <module name="aerial-multispectral-app2" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -272,7 +272,6 @@
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
         <env name="exiftoolpath" value="C:\exiftool\exiftool.exe" />
       </envs>
       <option name="SDK_HOME" value="C:\Users\Isaac Miller\AppData\Local\Programs\Python\Python37\python.exe" />
@@ -397,7 +396,6 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="-7" y="-7" width="1550" height="838" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.0" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -581,24 +579,25 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/metashape_stitcher.py">
+    <entry file="file://$PROJECT_DIR$/index_generator.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-657">
-          <caret line="20" column="57" selection-start-line="20" selection-start-column="57" selection-end-line="20" selection-end-column="57" />
+        <state relative-caret-position="91">
+          <caret line="195" column="44" lean-forward="true" selection-start-line="195" selection-start-column="44" selection-end-line="195" selection-end-column="44" />
           <folding>
-            <marker date="1570137763168" expanded="true" signature="448:449" ph="..." />
+            <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#1137#1842#0" />
+            <element signature="e#1958#4218#0" />
+            <marker date="1570151718995" expanded="true" signature="6733:8317" ph="..." />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/index_generator.py">
+    <entry file="file://$PROJECT_DIR$/metashape_stitcher.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="261">
-          <caret line="275" lean-forward="true" selection-start-line="275" selection-end-line="275" />
+        <state relative-caret-position="6">
+          <caret line="36" column="75" selection-start-line="36" selection-start-column="75" selection-end-line="36" selection-end-column="75" />
           <folding>
-            <element signature="e#0#11#0" expanded="true" />
-            <element signature="e#1895#4203#0" />
-            <marker date="1570138275535" expanded="true" signature="6749:8424" ph="..." />
+            <marker date="1570152223562" expanded="true" signature="638:639" ph="..." />
           </folding>
         </state>
       </provider>
