@@ -47,7 +47,7 @@ equations = {
 }
 
 colormaps = {
-    'ndvi': 'rainbow_r',
+    'ndvi': 'Spectral',
     'ndre': 'Spectral',
     'dsm': 'terrain'
 }
@@ -162,10 +162,12 @@ def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True):
 
     for index in indexlist:
         indexdata = equations[index](bands)
-        print('beginning colormap stuff...')
+
         masked = np.ma.masked_invalid(indexdata)
+        print(masked.shape)
         outputname = os.path.join(outputpath, outputbase + '_' + index + '.tif')
         if colormap:
+            print('beginning colormap stuff...')
             v = cm.get_cmap(colormaps[index], 256)
             print('minmax:', np.min(masked), np.max(masked))
             adj, mn, mx = normalize(masked)
@@ -176,10 +178,10 @@ def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True):
             c *= 255
             c = c.astype(int)
             print(np.min(c[0]), np.max(c[0]), np.mean(c[0]))
-            print('minmax:',mn,mx)
+            print('minmax:', mn, mx)
             norm = colors.Normalize(vmin=mn,vmax=mx)
 
-            fig, ax = plt.subplots(figsize=(1, 6),constrained_layout=True)
+            fig, ax = plt.subplots(figsize=(1, 6), constrained_layout=True)
             plt.close()
             cb = cbar.ColorbarBase(ax, v, norm)
             cb.set_label(index.upper(), rotation=90)
@@ -195,14 +197,17 @@ def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True):
             out.SetProjection(projection)
             for band, i in zip(c, range(1, 5)):
                 out.GetRasterBand(i).WriteArray(band)
+            print('saving...')
+            out.FlushCache()
         else:
             names.append([outputname, None])
             options = ['PROFILE=GeoTIFF']
             out = driver.Create(outputname, cols, rows, 1, gdal.GDT_Float32, options=options)
             out.GetRasterBand(1).WriteArray(masked.filled(-10000))
+            print('saving...')
+            out.FlushCache()
 
-        print('saving...')
-        out.FlushCache()
+
         del out
         end_time = dt.now()
         print('stack analysis ended at ', end_time)
@@ -261,6 +266,7 @@ def colormap_dsm(file, outputpath, outputbase, colormap=colormaps['dsm']):
 
 
 if __name__ == '__main__':
-    fnames = generate_from_stack('test_ortho.tif', ['ndvi', 'ndre'], os.getcwd(), 'test')
-    dsmname = colormap_dsm('test_dem.tif', os.getcwd(), 'test1')
+    fnames = generate_from_stack('test_purcell_ortho.tif', ['ndvi', 'ndre'], os.getcwd(), 'test_colored')
+    fnames2 = generate_from_stack('test_purcell_ortho.tif', ['ndvi', 'ndre'], os.getcwd(), 'test_no_color', colormap=False)
+    dsmname = colormap_dsm('test_purcell_dem.tif', os.getcwd(), 'test1')
     #print(fnames, dsmname)

@@ -1,9 +1,9 @@
-import Metashape, os, glob
+import Metashape, os, glob, shutil
 from datetime import datetime as dt
 LICENSE = 'TXC3V-LUVCT-E1BLK-U83UR-GP25H'  # 30-day temporary license. Will expire Nov. 1, 2019.
 CALIB_CSV = 'RP04-1908203-SC.csv'  # Calibration data for Aerial Multispectral Imagery panel
 TEST_CALIB_CSV = 'RP04-1808099-SC.csv'  # Calibration data for example altum dataset
-PATH = 't_project.psx'
+PATH = 't_project'
 
 
 def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, temp_path=PATH,calib_csv=None):
@@ -23,7 +23,7 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
             'Invalid or expired license. Please call the function with license= a valid Metashape license')
 
     doc = Metashape.Document()
-    doc.save(temp_path)
+    doc.save(temp_path+'.psx')
     doc.read_only = False
     gpus = app.enumGPUDevices()  # list of available GPUS
     s = sum(2**i for i in range(len(gpus)))
@@ -89,13 +89,18 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
     doc.clear()
     app.quit()
     end_time = dt.now()
+    print('removing extra files...')
+    try:
+        shutil.rmtree(temp_path+'.files', True)
+    except OSError or PermissionError:
+        print('permission denied. Please delete', temp_path, '.files')
     print('stitch ended at ', end_time)
     print('total time to stitch:', end_time-start_time)
     return names
 
 
 if __name__ == '__main__':
-    imagePath = os.path.expanduser(os.path.join('altum_example','0000SET'))
-    cams = ['blue', 'green', 'red', 'nir', 'red_edge', 'lwir']
-    outputs = stitch(imagePath, cams, 'test', os.getcwd(), calib_csv=TEST_CALIB_CSV)
+    imagePath = os.path.expanduser(os.path.join('0003SET'))
+    cams = ['blue', 'green', 'red', 'nir', 'red_edge']#, 'lwir']
+    outputs = stitch(imagePath, cams, 'test_purcell', os.getcwd(), calib_csv=TEST_CALIB_CSV)
     print(outputs)

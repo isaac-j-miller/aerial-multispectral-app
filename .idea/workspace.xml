@@ -2,8 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="316c8cd2-9e40-4cdc-9bc3-eed5f424424e" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dem.tif" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/index_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/index_generator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/metashape_stitcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/metashape_stitcher.py" afterDir="false" />
@@ -38,10 +36,10 @@
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
           <entry key="Python Console" value="184" />
-          <entry key="index_generator" value="476" />
+          <entry key="index_generator" value="685" />
           <entry key="metashape_stitcher" value="16" />
           <entry key="micasense" value="233" />
-          <entry key="py" value="16851" />
+          <entry key="py" value="17135" />
           <entry key="stitcher driver" value="445" />
           <entry key="txt" value="454" />
         </counts>
@@ -49,7 +47,7 @@
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="454" />
-          <entry key="Python" value="18205" />
+          <entry key="Python" value="18698" />
         </counts>
       </usages-collector>
     </session>
@@ -59,11 +57,11 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/metashape_stitcher.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="329">
-              <caret line="101" selection-start-line="101" selection-end-line="101" />
+            <state relative-caret-position="295">
+              <caret line="104" column="51" selection-start-line="104" selection-start-column="51" selection-end-line="104" selection-end-column="51" />
               <folding>
-                <element signature="e#0#26#0" expanded="true" />
-                <marker date="1570155911649" expanded="true" signature="782:783" ph="..." />
+                <element signature="e#0#34#0" expanded="true" />
+                <marker date="1570160752197" expanded="true" signature="786:787" ph="..." />
               </folding>
             </state>
           </provider>
@@ -72,13 +70,14 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/index_generator.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="278">
-              <caret line="263" column="4" selection-start-line="263" selection-start-column="4" selection-end-line="263" selection-end-column="4" />
+            <state relative-caret-position="346">
+              <caret line="272" lean-forward="true" selection-start-line="272" selection-end-line="272" />
               <folding>
                 <element signature="e#0#11#0" expanded="true" />
                 <element signature="e#1137#1842#0" />
                 <element signature="e#1958#4218#0" />
-                <marker date="1570159414528" expanded="true" signature="6992:8576" ph="..." />
+                <element signature="e#4590#4751#0" />
+                <marker date="1570160809518" expanded="true" signature="7096:8680" ph="..." />
               </folding>
             </state>
           </provider>
@@ -101,6 +100,8 @@
       <find>build</find>
       <find>coordinate</find>
       <find>building</find>
+      <find>PATH</find>
+      <find>temp</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -376,6 +377,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="-7" y="-7" width="1550" height="838" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.0" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -561,24 +563,25 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/metashape_stitcher.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="329">
-          <caret line="101" selection-start-line="101" selection-end-line="101" />
+        <state relative-caret-position="295">
+          <caret line="104" column="51" selection-start-line="104" selection-start-column="51" selection-end-line="104" selection-end-column="51" />
           <folding>
-            <element signature="e#0#26#0" expanded="true" />
-            <marker date="1570155911649" expanded="true" signature="782:783" ph="..." />
+            <element signature="e#0#34#0" expanded="true" />
+            <marker date="1570160752197" expanded="true" signature="786:787" ph="..." />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/index_generator.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="278">
-          <caret line="263" column="4" selection-start-line="263" selection-start-column="4" selection-end-line="263" selection-end-column="4" />
+        <state relative-caret-position="346">
+          <caret line="272" lean-forward="true" selection-start-line="272" selection-end-line="272" />
           <folding>
             <element signature="e#0#11#0" expanded="true" />
             <element signature="e#1137#1842#0" />
             <element signature="e#1958#4218#0" />
-            <marker date="1570159414528" expanded="true" signature="6992:8576" ph="..." />
+            <element signature="e#4590#4751#0" />
+            <marker date="1570160809518" expanded="true" signature="7096:8680" ph="..." />
           </folding>
         </state>
       </provider>
