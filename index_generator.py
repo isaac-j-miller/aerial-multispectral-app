@@ -5,6 +5,7 @@ import matplotlib.colors as colors
 import matplotlib.colorbar as cbar
 import matplotlib.pyplot as plt
 import os
+from datetime import datetime as dt
 
 
 def calc_index(numerator, denominator):
@@ -37,7 +38,7 @@ def adjust(arr):
 def normalize(arr):
     mn = np.min(arr)
     mx = np.max(arr)
-    return (arr - mn)/(mx-mn),mn,mx
+    return (arr - mn)/(mx-mn), mn, mx
 
 
 equations = {
@@ -142,6 +143,8 @@ def generate_from_separate(files, indexlist, outputpath, outputbase):  # functio
 
 
 def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True):
+    start_time = dt.now()
+    print('stack analysis started at ', start_time)
     base = gdal.Open(file)
     trans = base.GetGeoTransform()
     projection = base.GetProjection()
@@ -201,6 +204,9 @@ def generate_from_stack(file, indexlist, outputpath, outputbase, colormap=True):
         print('saving...')
         out.FlushCache()
         del out
+        end_time = dt.now()
+        print('stack analysis ended at ', end_time)
+        print('total time to analyze:', end_time - start_time)
     return names
 
 
@@ -257,4 +263,4 @@ def colormap_dsm(file, outputpath, outputbase, colormap=colormaps['dsm']):
 if __name__ == '__main__':
     fnames = generate_from_stack('test_ortho.tif', ['ndvi', 'ndre'], os.getcwd(), 'test')
     dsmname = colormap_dsm('test_dem.tif', os.getcwd(), 'test1')
-    print(fnames, dsmname)
+    #print(fnames, dsmname)

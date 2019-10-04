@@ -1,11 +1,14 @@
 import Metashape, os, glob
+from datetime import datetime as dt
 LICENSE = 'TXC3V-LUVCT-E1BLK-U83UR-GP25H'  # 30-day temporary license. Will expire Nov. 1, 2019.
 CALIB_CSV = 'RP04-1908203-SC.csv'  # Calibration data for Aerial Multispectral Imagery panel
-TEST_CALIB_CSV = 'RP04-1808099-SC.csv'  # Cali
+TEST_CALIB_CSV = 'RP04-1808099-SC.csv'  # Calibration data for example altum dataset
 PATH = 't_project.psx'
 
 
 def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, temp_path=PATH,calib_csv=None):
+    start_time = dt.now()
+    print('stitch started at ', start_time)
     bands = []
     for i in range(len(available_bands)):
         print('finding images for', available_bands[i], 'band...')
@@ -83,7 +86,11 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
                             tiff_big=True,
                             white_background=False)
     names = [demname, orthoname]
+    doc.clear()
     app.quit()
+    end_time = dt.now()
+    print('stitch ended at ', end_time)
+    print('total time to stitch:', end_time-start_time)
     return names
 
 

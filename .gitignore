@@ -2224,3 +2224,6 @@ mosaic.tif
 ortho.tif
 test_dem.tif
 test_ortho.tif
+*.tif
+*.tif
+*.zip
