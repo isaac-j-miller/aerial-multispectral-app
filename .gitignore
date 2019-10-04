@@ -2221,3 +2221,6 @@ t_project.files/0/0/dense_cloud.1/dense_cloud.zip
 t_project.files/0/0/dense_cloud.1/dense_cloud.oc3
 stacked.tif
 mosaic.tif
+ortho.tif
+test_dem.tif
+test_ortho.tif
