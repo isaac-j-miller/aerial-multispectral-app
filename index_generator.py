@@ -15,6 +15,11 @@ def calc_index(numerator, denominator):
     return a
 
 
+def mask_zeros(bands_):
+    vals = list(bands_.values())
+    return {k: np.ma.masked_where(sum(vals) == 0, bands_[k]) for k in bands_.keys()}
+
+
 def gen_ndvi(bands):
     numerator = bands['nir'] - bands['red']
     denominator = bands['nir'] + bands['red']
@@ -33,6 +38,52 @@ def gen_thermal(bands):
     return dat/100 - 273.15
 
 
+def gen_gndvi(bands):
+    numerator = bands['nir'] - bands['green']
+    denominator = bands['nir'] + bands['green']
+    return calc_index(numerator, denominator)
+
+
+def gen_endvi(bands):
+    numerator = bands['nir'] + bands['green'] - 2 * bands['blue']
+    denominator = bands['nir'] + bands['green'] + 2 * bands['blue']
+    return calc_index(numerator, denominator)
+
+
+def gen_savi(bands, L=0.5):  # L should be 0.25 for mid-growth, 0.1 for early growth
+    numerator = (bands['nir'] - bands['red'])/16934.0
+    denominator = (bands['nir'] + bands['red'])/16934.0 + L
+    return mask_extremes(calc_index(numerator, denominator)*(1+L))
+
+
+def gen_gli(bands):
+    numerator = 2 * bands['green'] - (bands['red'] + bands['blue'])
+    denominator = 2 * bands['green'] + (bands['red'] + bands['blue'])
+    return calc_index(numerator, denominator)
+
+
+def gen_vari(bands):
+    numerator = bands['green'] - bands['red']
+    denominator = bands['green'] + bands['red'] - bands['blue']
+    return calc_index(numerator, denominator)
+
+
+def gen_gdi(bands):
+    return mask_extremes((bands['nir'] - bands['green'])/16934.0)
+
+
+def gen_dvi(bands):
+    return mask_extremes((bands['nir'] - bands['red'])/16934.0)
+
+
+def mask_extremes(arr, std_devs=5):  # no longer used, but still maybe useful later
+    r = arr.std()*std_devs
+    low = arr.mean() - r
+    high = arr.mean() + r
+
+    return np.ma.masked_outside(arr, low, high)
+
+
 def adjust(arr):
     return (arr + 1.0)/2.0
 
@@ -46,14 +97,44 @@ def normalize(arr):
 equations = {
     'ndvi': gen_ndvi,
     'ndre': gen_ndre,
-    'thermal': gen_thermal
+    'thermal': gen_thermal,
+    'gndvi': gen_gndvi,
+    'endvi': gen_endvi,
+    'savi': gen_savi,
+    'gli': gen_gli,
+    'vari': gen_vari,
+    'gdi': gen_gdi,
+    'dvi': gen_dvi
 }
 
+
+ranges = {
+    'ndvi': [-1.0,1.0],
+    'ndre': [-1.0,1.0],
+    'thermal': [-np.inf,np.inf],
+    'dsm': [-np.inf,np.inf],
+    'gndvi': [-1.0,1.0],
+    'endvi': [-1.0,1.0],
+    'savi': [-1.0,1.0],
+    'gli': [-1.0,1.0],
+    'vari': [-1.0,1.0],
+    'gdi': [-1.0,1.0],
+    'dvi': [-1.0,1.0],
+}
+
+
 colormaps = {
-    'ndvi': 'Spectral',
-    'ndre': 'Spectral',
+    'ndvi': 'RdYlGn',
+    'ndre': 'RdYlGn',
     'thermal': 'CMRmap',
-    'dsm': 'terrain'
+    'dsm': 'terrain',
+    'gndvi': 'RdYlGn',
+    'endvi': 'RdYlGn',
+    'savi': 'RdYlGn',
+    'gli': 'RdYlGn',
+    'vari': 'RdYlGn',
+    'gdi': 'RdYlGn',
+    'dvi': 'RdYlGn'
 }
 
 bandNames = ['blue', 'green', 'red', 'nir', 'red_edge', 'lwir']
@@ -146,7 +227,19 @@ def generate_from_separate(files, indexlist, outputpath, outputbase):  # functio
     return names
 
 
-def generate_from_stack(file, indexdict, outputpath, outputbase, colormap=True, units='F'):  # units can be F or C. units only used for thermal
+def diagnose(file, band=None, mask=None):
+    d = gdal.Open(file)
+    if band is not None:
+        a = d.ReadAsArray()[band]
+    else:
+        a = d.ReadAsArray()
+    if mask is not None:
+        a = np.ma.masked_where(a <= mask,a)
+    plt.imshow(a)
+    return a
+
+
+def generate_from_stack(file, indexdict, outputpath, outputbase, colormap=True, units='F', L=0.25):  # units can be F or C. units only used for thermal, L only used for SAVI
     try:
         indexlist = indexdict.keys()
     except AttributeError:
@@ -168,72 +261,86 @@ def generate_from_stack(file, indexdict, outputpath, outputbase, colormap=True, 
         temp = np.ma.masked_where(temp == -10000, temp)
         bands[band] = temp
         del temp
-
+    bands = mask_zeros(bands)
     for index in indexlist:
         print('beginning analysis on',index,'...')
-        indexdata = equations[index](bands)
-        if index == 'thermal':
-            if units == 'F':
-                indexdata = indexdata*9 / 5 + 32
-                label = 'Temperature (' + u'\N{DEGREE SIGN}' + 'F)'
+
+        if index in equations.keys():
+            if index == 'savi':
+                indexdata = equations[index](bands, L)
             else:
-                label = 'Temperature (' + u'\N{DEGREE SIGN}' + 'C)'
+                indexdata = equations[index](bands)
+
+            if index == 'thermal':
+                if units == 'F':
+                    indexdata = indexdata*9 / 5 + 32
+                    label = 'Temperature (' + u'\N{DEGREE SIGN}' + 'F)'
+                else:
+                    label = 'Temperature (' + u'\N{DEGREE SIGN}' + 'C)'
+            else:
+                label = index.upper()
+
+            masked = np.ma.masked_invalid(indexdata)
+            #print(masked.shape)
+            outputname = os.path.join(outputpath, outputbase + '_' + index + '.tif')
+            if colormap:
+                print('beginning colormap stuff...')
+                try:
+                    v = cm.get_cmap(indexdict[index], 256)
+                except ValueError:
+                    v = cm.get_cmap(colormaps[index], 256)
+                    print('invalid colormap. using default from colormaps')
+                print('minmax:', np.min(masked), np.max(masked))
+
+                masked = np.ma.masked_outside(masked, ranges[index][0], ranges[index][1])
+                adj, mn, mx = normalize(masked)
+                #experimental:
+                if index != 'thermal':
+                    mn, mx = ranges[index]
+                print('acceptable minmax:', ranges[index][0], ranges[index][1])
+                print('new minmax:', mn, mx)
+                c = v(adj)
+                #print(c.shape)
+                c = np.transpose(c, (2, 0, 1))
+                #print(c.shape)
+                c *= 255
+                c = c.astype(int)
+
+                norm = colors.Normalize(vmin=mn,vmax=mx)
+
+                fig, ax = plt.subplots(figsize=(1, 6), constrained_layout=True)
+                plt.close()
+                cb = cbar.ColorbarBase(ax, v, norm)
+
+                cb.set_label(label=label, rotation=90)
+
+                scalename = os.path.join(outputpath, outputbase + '_'+index+'_scale.png')
+                fig.savefig(scalename)
+                print('ending colormap stuff...')
+
+                names.append([outputname, scalename])
+                options = ['PHOTOMETRIC=RGB', 'PROFILE=GeoTIFF']
+                out = driver.Create(outputname, cols, rows, 4, gdal.GDT_Byte, options=options)
+                out.SetGeoTransform(trans)
+                out.SetProjection(projection)
+                for band, i in zip(c, range(1, 5)):
+                    out.GetRasterBand(i).WriteArray(band)
+                print('saving...')
+                out.FlushCache()
+            else:
+                names.append([outputname, None])
+                options = ['PROFILE=GeoTIFF']
+                out = driver.Create(outputname, cols, rows, 1, gdal.GDT_Float32, options=options)
+                out.GetRasterBand(1).WriteArray(masked.filled(-10000))
+                print('saving...')
+                out.FlushCache()
+
+            del out
         else:
-            label = index.upper()
-
-        masked = np.ma.masked_invalid(indexdata)
-        print(masked.shape)
-        outputname = os.path.join(outputpath, outputbase + '_' + index + '.tif')
-        if colormap:
-            print('beginning colormap stuff...')
-            try:
-                v = cm.get_cmap(indexdict[index], 256)
-            except ValueError:
-                v = cm.get_cmap(colormaps[index], 256)
-                print('invalid colormap. using default from colormaps')
-            print('minmax:', np.min(masked), np.max(masked))
-            adj, mn, mx = normalize(masked)
-            c = v(adj)
-            print(c.shape)
-            c = np.transpose(c, (2, 0, 1))
-            print(c.shape)
-            c *= 255
-            c = c.astype(int)
-            print(np.min(c[0]), np.max(c[0]), np.mean(c[0]))
-            print('minmax:', mn, mx)
-            norm = colors.Normalize(vmin=mn,vmax=mx)
-
-            fig, ax = plt.subplots(figsize=(1, 6), constrained_layout=True)
-            plt.close()
-            cb = cbar.ColorbarBase(ax, v, norm)
-
-            cb.set_label(label=label, rotation=90)
-
-            scalename = os.path.join(outputpath, outputbase + '_'+index+'_scale.png')
-            fig.savefig(scalename)
-            print('ending colormap stuff...')
-
-            names.append([outputname, scalename])
-            options = ['PHOTOMETRIC=RGB', 'PROFILE=GeoTIFF']
-            out = driver.Create(outputname, cols, rows, 4, gdal.GDT_Byte, options=options)
-            out.SetGeoTransform(trans)
-            out.SetProjection(projection)
-            for band, i in zip(c, range(1, 5)):
-                out.GetRasterBand(i).WriteArray(band)
-            print('saving...')
-            out.FlushCache()
-        else:
-            names.append([outputname, None])
-            options = ['PROFILE=GeoTIFF']
-            out = driver.Create(outputname, cols, rows, 1, gdal.GDT_Float32, options=options)
-            out.GetRasterBand(1).WriteArray(masked.filled(-10000))
-            print('saving...')
-            out.FlushCache()
-
-        del out
-        end_time = dt.now()
-        print('stack analysis ended at ', end_time)
-        print('total time to analyze:', end_time - start_time)
+            print('invalid key:',index,'; ignoring...')
+    end_time = dt.now()
+    print('stack analysis ended at ', end_time)
+    print('total time to analyze:', end_time - start_time)
     return names
 
 
@@ -292,14 +399,18 @@ def colormap_tif(file, outputpath, outputbase, dataname, colormap=colormaps['dsm
         v = cm.get_cmap(colormap, 256)
 
     print('minmax:', np.min(masked), np.max(masked))
+    masked = np.ma.masked_outside(masked, ranges[dataname][0], ranges[dataname][1])
     adj, mn, mx = normalize(masked)
+    # experimental:
+    if dataname not in ['thermal','dsm']:
+        mn, mx = ranges[dataname]
     c = v(adj)
-    print(c.shape)
+    #print(c.shape)
     c = np.transpose(c, (2, 0, 1))
-    print(c.shape)
+    #print(c.shape)
     c *= 255
     c = c.astype(int)
-    print(np.min(c[0]), np.max(c[0]), np.mean(c[0]))
+    #print(np.min(c[0]), np.max(c[0]), np.mean(c[0]))
 
     print('minmax:', mn, mx)
     norm = colors.Normalize(vmin=mn, vmax=mx)
@@ -324,10 +435,50 @@ def colormap_tif(file, outputpath, outputbase, dataname, colormap=colormaps['dsm
     return names
 
 
+#  TESTS
+def test_all():
+    test_color()
+    print('DONE WITH COLOR TEST ####################################################')
+    test_no_color()
+
+def test_color():
+    fnames = generate_from_stack('test_ortho.tif', colormaps,
+                                 os.getcwd(), '0test_colored', units='C')  # does a test of all indices
+
+
+def test_no_color():
+    fnames = generate_from_stack('test_ortho.tif', colormaps,
+                                 os.getcwd(), '0test_no_color', units='C',
+                                 colormap=False)  # does a test of all indices
+
+
+def test_specific_colored(indices):
+    fnames = generate_from_stack('test_ortho.tif', indices,
+                                 os.getcwd(), '0test_colored', units='C')  # does a test of all indices
+
+
+def test_specific_no_color(indices):
+    fnames = generate_from_stack('test_ortho.tif', indices,
+                                 os.getcwd(), '0test_no_color', units='C',
+                                 colormap=False)  # does a test of all indices
+
+
+def test_specific_all(indices):
+    test_specific_colored(indices)
+    print('DONE WITH COLOR TEST ####################################################')
+    test_specific_no_color(indices)
+
+
 if __name__ == '__main__':
-    fnames = generate_from_stack('test_ortho.tif', {'thermal':'CMRmap','ndvi':'gnuplot2','ndre':'Spectral'}, os.getcwd(), 'test_colored', units='C')
-    #fnames2 = generate_from_stack('test_ortho.tif', ['thermal'], os.getcwd(), 'test_no_color', colormap=False)
-    #rgb = gen_rgb('test_ortho.tif', os.getcwd(),'test')
-    #ndre = colormap_tif('test_no_color_ndvi.tif', os.getcwd(), 'colormap_test', '', 'cubehelix')
-    #dsmname = colormap_dsm('test_dem.tif', os.getcwd(), 'test1')
-    #print(fnames, dsmname)
+    #  example of how to call generate_from_stack:
+    #  fnames = generate_from_stack('test_ortho.tif',
+    #                               {'thermal':'CMRmap','ndvi':'gnuplot2','ndre':'Spectral'},
+    #                               os.getcwd(), 'test_colored', units='C')
+    #  example of how to call gen_rgb to make an rgb orthomosaic:
+    #  rgb = gen_rgb('test_ortho.tif', os.getcwd(),'test')
+    #  example of how to call colormap_tif to make a colormapped dsm:
+    #  dsmname = colormap_dsm('test_dem.tif', os.getcwd(), 'test1')
+    #indices = ['savi']
+    #test_specific_all(indices)
+    test_color()
+    pass
