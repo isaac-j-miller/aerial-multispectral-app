@@ -7,6 +7,19 @@ PATH = 't_project'
 
 
 def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, temp_path=PATH,calib_csv=None):
+    """
+    stitch: stitches photos and generates an orthomosaic and digital surface model for set of multispectral images.
+    Params:
+    :param main_dir: string of main source directory location. For micasense sets, this often looks like '0001SET'
+    :param available bands: list of bands in order: for altum, ['blue', 'green', 'red', 'nir', 'red_edge', 'lwir']. For rededge: ['blue', 'green', 'red', 'nir', 'red_edge']
+    :param basename: base name for outputs. Example: basename = 'test_file', outputs are 'test_file_ortho.tif', 'test_file_dsm.tif'
+    :param output_dir: directory to output files into.
+    :param license: valid Metashape Pro license (string).
+    :param temp_path: temporary path for Metashape project while processing.
+    :param calib_csv: location of csv file for specific calibration file.
+    returns:
+    :return: list of output files as [digital surface model name, stacked orthomosaic name]
+    """
     start_time = dt.now()
     print('stitch started at ', start_time)
     bands = []
@@ -47,16 +60,22 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
 
     print('aligning cameras...')
     chunk.alignCameras()
+    doc.save()
     print('optimizing cameras...')
     chunk.optimizeCameras()
+    doc.save()
     print('building depth maps...')
     chunk.buildDepthMaps(quality=Metashape.MediumQuality, filter=Metashape.AggressiveFiltering)
+    doc.save()
     print('building dense cloud...')
     chunk.buildDenseCloud()
+    doc.save()
     print('building model...')
     chunk.buildModel(surface=Metashape.Arbitrary, interpolation=Metashape.EnabledInterpolation)
+    doc.save()
     print('building UV...')
     chunk.buildUV(mapping=Metashape.GenericMapping)
+    doc.save()
     print('building texture...')
     chunk.buildTexture(blending=Metashape.MosaicBlending, size=4096)
     print('saving...')
@@ -64,7 +83,7 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
     print('building dem...')
     chunk.buildDem(source=Metashape.DenseCloudData, interpolation=Metashape.EnabledInterpolation)
     print('exporting dem...')
-    demname = os.path.join(output_dir, basename+'_dem.tif')
+    demname = os.path.join(output_dir, basename+'_dsm.tif')
     chunk.exportDem(demname,
                     format=Metashape.RasterFormatTiles,
                     image_format=Metashape.ImageFormatTIFF,
@@ -73,9 +92,8 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
                     tiff_big=True)
 
     print('building orthomosaic...')
-    chunk.buildOrthomosaic(surface=Metashape.ModelData,
-
-                           blending=Metashape.MosaicBlending)
+    chunk.buildOrthomosaic(surface=Metashape.ModelData, blending=Metashape.MosaicBlending)
+    doc.save()
     print('exporting orthomosaic...')
     orthoname = os.path.join(output_dir, basename+'_ortho.tif')
     chunk.exportOrthomosaic(orthoname,
@@ -100,7 +118,7 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
 
 
 if __name__ == '__main__':
-    imagePath = os.path.expanduser(os.path.join('0003SET'))
-    cams = ['blue', 'green', 'red', 'nir', 'red_edge']#, 'lwir']
-    outputs = stitch(imagePath, cams, 'test_purcell', os.getcwd(), calib_csv=TEST_CALIB_CSV)
+    imagePath = os.path.expanduser(os.path.join('D:/','0006SET'))
+    cams = ['blue', 'green', 'red', 'nir', 'red_edge', 'lwir']
+    outputs = stitch(imagePath, cams, 'blenheim_oct_6_19', 'Blenheim', calib_csv=CALIB_CSV)
     print(outputs)
