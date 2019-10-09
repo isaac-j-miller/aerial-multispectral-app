@@ -364,6 +364,7 @@ def diagnose(file, band=None, mask=None, **kwargs):
 
 
 def generate_from_stack(file, indexdict, outputpath, outputbase, colormap=True, units='F', L=0.25):  # units can be F or C. units only used for thermal, L only used for SAVI
+    #TODO: add max size parameter
     """
     generate_from_stack: generates multispectral indices from a stacked .tif file
     Params:
