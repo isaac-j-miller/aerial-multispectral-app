@@ -117,8 +117,4 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
     return names
 
 
-if __name__ == '__main__':
-    imagePath = os.path.expanduser(os.path.join('D:/','0006SET'))
-    cams = ['blue', 'green', 'red', 'nir', 'red_edge', 'lwir']
-    outputs = stitch(imagePath, cams, 'blenheim_oct_6_19', 'Blenheim', calib_csv=CALIB_CSV)
-    print(outputs)
+

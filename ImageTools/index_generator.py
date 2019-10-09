@@ -778,3 +778,25 @@ def test_specific_all(src, destname, indices):
     names.extend(test_specific_no_color(src, destname+'no_color', indices))
     return names
 
+
+if __name__ == '__main__':
+    #  example of how to call generate_from_stack:
+    #  fnames = generate_from_stack('test_ortho.tif',
+    #                               {'thermal':'CMRmap','ndvi':'gnuplot2','ndre':'Spectral'},
+    #                               os.getcwd(), 'test_colored', units='C')
+    #  example of how to call gen_rgb to make an rgb orthomosaic:
+    #  rgb = gen_rgb('test_ortho.tif', os.getcwd(),'test')
+    #  example of how to call colormap_tif to make a colormapped dsm:
+    #  dsmname = colormap_dsm('test_dem.tif', os.getcwd(), 'test1')
+    #indices = ['savi']
+    #test_specific_all(indices)
+    #test_color()
+    ortho_resized = resize_tif('Blenheim/blenheim_oct_6_19_ortho.tif', 'Blenheim','blenheim_ortho_resized', 0.25, False)
+    a = test_all('Blenheim/blenheim_ortho_resized.tif','Blenheim/Blenheim_test_pre_resized')
+    #a=[['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_ndvi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_ndvi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_ndre.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_ndre_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_thermal.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_thermal_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gndvi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gndvi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_endvi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_endvi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_savi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_savi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gli.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gli_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_vari.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_vari_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gdi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gdi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_dvi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_dvi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_ndvi.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_ndre.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_thermal.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_gndvi.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_endvi.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_savi.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_gli.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_vari.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_gdi.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_dvi.tif', None]]
+    #gen_rgb('Blenheim/blenheim_oct_6_19_ortho.tif','Blenheim','test')
+    #print(resize_tif('Blenheim/test_rgb.tif',
+               #'Blenheim/test_rgb_resampled',0.1))
+    #b = resize_tif_list(tifs_from_stack_output(a),'Blenheim','resized',0.1, True)
+    #print(b)
+    pass
