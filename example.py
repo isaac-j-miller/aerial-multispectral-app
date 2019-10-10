@@ -31,23 +31,29 @@ if __name__ == '__main__':
     stitched.setColormaps(ig.colormaps)  #unnecessary, just a test
     t = elapsed('colormaps',t)
     
-    print('calculating indices...')
-    stitched.generateIndices(ig.colormaps.keys())
-    t = elapsed('index calculation',t)
+    #print('calculating indices...')
+    #stitched.generateIndices(ig.colormaps.keys())
+    #t = elapsed('index calculation',t)
     
-    print('exporting color images...')
-    colors = stitched.exportGeneratedIndicesAsColorImages()
-    t = elapsed('color image export',t)
+    #print('exporting color images...')
+    #colors = stitched.exportGeneratedIndicesAsColorImages()
+    #t = elapsed('color image export',t)
     
-    print('exporting mono images...')
-    monos = stitched.exportGeneratedIndicesAsMonoImages()
-    t = elapsed('mono image export',t)
+        #print('exporting mono images...')
+    #monos = stitched.exportGeneratedIndicesAsMonoImages()
+    #t = elapsed('mono image export',t)
+    
+    print('exporting rgba image...')
+    rgba = stitched.exportRGBAImage()
+    t = elapsed('rgba image export',t)
     
     elapsed('full process',t2)
     
-    print('color image files: ')
-    print([os.path.split(c[0])[-1] for c in colors])
+    #print('color image files: ')
+    #print([os.path.split(c[0])[-1] for c in colors])
 
-    print('mono image files: ')
-    print([os.path.split(m)[-1] for m in monos])
+    #print('mono image files: ')
+    #print([os.path.split(m)[-1] for m in monos])
+
+    print('rgba image file:', os.path.split(rgba)[-1])
 

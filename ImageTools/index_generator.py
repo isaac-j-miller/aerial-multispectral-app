@@ -274,8 +274,6 @@ colormaps = {
 bandNames = ['blue', 'green', 'red', 'nir', 'red_edge', 'lwir']
 
 
-
-
 def diagnose(file, band=None, mask=None, **kwargs):
     """
     diagnose: opens a georeferenced .tif file, plots it, and returns the np array of the data.

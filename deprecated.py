@@ -221,4 +221,102 @@ def generate_from_separate(files, indexlist, outputpath, outputbase):  # functio
     print('stack analysis ended at ', end_time)
     print('total time to analyze:', end_time - start_time)
     return names
- 
+    
+    
+ def tifs_from_stack_output(input_list):
+    """
+    tifs_from_stack_output: returns a list of all .tif files generated from generate_from_stack or test_all output.
+    Params:
+    :param input_list: generate_from_stack or test_all output
+    returns:
+    :return: list of all .tif files inside input_list
+    """
+    return [item[0] for item in input_list if '.tif' in item[0]]
+    
+def test_color(src, destname):
+    """
+    test_color: generates color .tifs for a given input file for all indices
+    Params:
+    :param src: string of input file location
+    :param destname: directory to place output into
+    returns:
+    :return: list of filepaths in format specified in generate_from_stack()
+    """
+    return generate_from_stack(src, colormaps,
+                               os.getcwd(), destname, units='C')  # does a test of all indices
+
+
+def test_no_color(src, destname):
+    """
+    test_no_color: generates monochrome .tifs for a given input file for all indices
+    Params:
+    :param src: string of input file location
+    :param destname: directory to place output into
+    returns:
+    :return: list of filepaths in format specified in generate_from_stack()
+    """
+    return generate_from_stack(src, colormaps,
+                               os.getcwd(), destname, units='C',
+                               colormap=False)  # does a test of all indices
+
+def test_all(src, destname):
+    """
+    test_all: generates color and single-band .tifs for a given input file for all indices
+    Params:
+    :param src: string of input file location
+    :param destname: directory to place output into
+    returns:
+    :return: list of filepaths in format specified in generate_from_stack()
+    """
+    names = []
+    names.extend(test_color(src, destname+'color'))
+    print('DONE WITH COLOR TEST ####################################################')
+    names.extend(test_no_color(src, destname+'no_color'))
+    return names
+
+
+def test_specific_colored(src, destname, indices):
+    """
+    test_specific_colored: generates color .tifs for a given input file and a given indexdict
+    Params:
+    :param src: string of input file location
+    :param destname: directory to place output into
+    :param indices: indexdict as defined in generate_from_stack()
+    returns:
+    :return: list of filepaths in format specified in generate_from_stack()
+    """
+    return generate_from_stack(src, indices,
+                               os.getcwd(), destname, units='C')  # does a test of all indices
+
+
+def test_specific_no_color(src, destname, indices):
+    """
+    test_specific_color: generates monochrome .tifs for a given input file and a given indexdict
+    Params:
+    :param src: string of input file location
+    :param destname: directory to place output into
+    :param indices: indexdict as defined in generate_from_stack()
+    returns:
+    :return: list of filepaths in format specified in generate_from_stack()
+    """
+    return generate_from_stack(src, indices,
+                               os.getcwd(), destname, units='C',
+                               colormap=False)  # does a test of all indices
+
+
+def test_specific_all(src, destname, indices):
+    """
+    test_specific_all: generates color and monochrome .tifs for a given input file and a given indexdict
+    Params:
+    :param src: string of input file location
+    :param destname: directory to place output into
+    :param indices: indexdict as defined in generate_from_stack()
+    returns:
+    :return: list of filepaths in format specified in generate_from_stack()
+    """
+    names = []
+    names.extend(test_specific_colored(src, destname+'color', indices))
+    print('DONE WITH COLOR TEST ####################################################')
+    names.extend(test_specific_no_color(src, destname+'no_color', indices))
+    return names
+
