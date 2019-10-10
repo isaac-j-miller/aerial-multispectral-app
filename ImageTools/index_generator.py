@@ -8,8 +8,6 @@ import os
 from datetime import datetime as dt
 from PIL import Image
 
-RGBA_INTERPS = [gdal.GCI_RedBand,gdal.GCI_BlueBand,gdal.GCI_GreenBand,gdal.GCI_AlphaBand]
-
 def calc_index(numerator, denominator):
     """
     calc_index: dead simple internal function that divides np arrays without throwing errors for illegal operations and doesn't permanently change the np error settings
@@ -21,12 +19,15 @@ def calc_index(numerator, denominator):
     :return: a 2D np array
     """
     np.seterr(divide='ignore', invalid='ignore')
-    a = np.true_divide(numerator, denominator)
+    z = numerator + denominator == 0
+    d = denominator == 0
+    mask = d | z
+    a = numerator/denominator
     np.seterr(divide='raise', invalid='raise')
-    return a
+    return np.ma.masked_array(a, mask=mask)
 
 
-def mask_zeros(bands_):
+def mask_zeros(bands_,**kwargs):
     """
     mask_zeros: masks pixels in all bands of a multispectral np array (shape = (n, width, height) where n is number of bands)) where there is no data
     Params:
@@ -39,7 +40,7 @@ def mask_zeros(bands_):
     return {k: np.ma.masked_where(sum(vals) == 0, bands_[k]) for k in bands_.keys()}
 
 
-def gen_ndvi(bands):
+def gen_ndvi(bands,**kwargs):
     """
     gen_ndvi: calculates the ndvi for a multispectral np array (shape = (n, width, height) where n is number of bands))
     Params:
@@ -52,7 +53,7 @@ def gen_ndvi(bands):
     return calc_index(numerator, denominator)
 
 
-def gen_ndre(bands):
+def gen_ndre(bands,**kwargs):
     """
     gen_ndre: calculates the ndvi for a multispectral np array (shape = (n, width, height) where n is number of bands))
     Params:
@@ -65,7 +66,7 @@ def gen_ndre(bands):
     return calc_index(numerator, denominator)
 
 
-def gen_thermal(bands):
+def gen_thermal(bands, temperature_units='C', **kwargs):
     """
     gen_thermal: extracts thermal data for a multispectral np array (shape = (n, width, height) where n is number of bands))
     Params:
@@ -76,13 +77,16 @@ def gen_thermal(bands):
     try:
         dat = bands['lwir']
         dat = np.ma.masked_where(dat == 0, dat)
-        return dat/100 - 273.15
+        if temperature_units == 'C':
+            return dat/100 - 273.15
+        else:
+            return (dat/100 - 273.15)*9/5 + 32
     except KeyError:
         print('No thermal data available')
         return None
 
 
-def gen_gndvi(bands):
+def gen_gndvi(bands,**kwargs):
     """
     gen_gndvi: calculates the gndvi for a multispectral np array (shape = (n, width, height) where n is number of bands))
     Params:
@@ -95,7 +99,7 @@ def gen_gndvi(bands):
     return calc_index(numerator, denominator)
 
 
-def gen_endvi(bands):
+def gen_endvi(bands,**kwargs):
     """
     gen_endvi: calculates the endvi for a multispectral np array (shape = (n, width, height) where n is number of bands))
     Params:
@@ -108,7 +112,7 @@ def gen_endvi(bands):
     return calc_index(numerator, denominator)
 
 
-def gen_savi(bands, L=0.5):
+def gen_savi(bands, L=0.5, **kwargs):
     """
     gen_savi: calculates the savi for a multispectral np array (shape = (n, width, height) where n is number of bands))
     Params:
@@ -122,7 +126,7 @@ def gen_savi(bands, L=0.5):
     return mask_extremes(calc_index(numerator, denominator)*(1+L))
 
 
-def gen_gli(bands):
+def gen_gli(bands,**kwargs):
     """
     gen_gli: calculates the gli for a multispectral np array (shape = (n, width, height) where n is number of bands))
     Params:
@@ -135,7 +139,7 @@ def gen_gli(bands):
     return calc_index(numerator, denominator)
 
 
-def gen_vari(bands):
+def gen_vari(bands,**kwargs):
     """
     gen_vari: calculates the vari for a multispectral np array (shape = (n, width, height) where n is number of bands))
     Params:
@@ -148,7 +152,7 @@ def gen_vari(bands):
     return calc_index(numerator, denominator)
 
 
-def gen_gdi(bands):
+def gen_gdi(bands,**kwargs):  # may be incorrect
     """
     gen_gdi: calculates the gdi for a multispectral np array (shape = (n, width, height) where n is number of bands))
     Params:
@@ -156,10 +160,10 @@ def gen_gdi(bands):
     returns:
     :return: 2D np array with calculated index. values range from -1 to 1.
     """
-    return mask_extremes((bands['nir'] - bands['green'])/16934.0)
+    return (bands['nir'] - bands['green'])/16934.0
 
 
-def gen_dvi(bands):
+def gen_dvi(bands,**kwargs):  # may be incorrect
     """
     gen_dvi: calculates the dvi for a multispectral np array (shape = (n, width, height) where n is number of bands))
     Params:
@@ -167,8 +171,13 @@ def gen_dvi(bands):
     returns:
     :return: 2D np array with calculated index. values range from -1 to 1.
     """
-    return mask_extremes((bands['nir'] - bands['red'])/16934.0)
+    return (bands['nir'] - bands['red'])/16934.0
 
+def gen_dsm(bands, elevation_units='m', **kwargs):
+    if elevation_units=='ft':
+        return bands['dsm']*3.28
+    else:
+        return bands['dsm']
 
 def mask_extremes(arr, std_devs=5):
     """
@@ -197,12 +206,31 @@ def normalize(arr):
     mn = np.min(arr)
     mx = np.max(arr)
     return (arr - mn)/(mx-mn), mn, mx
+    
+    
+def getLabel(index, **kwargs):
+    if index == 'thermal':
+        return 'Temperature ({}{})'.format(u'\N{DEGREE SIGN}', kwargs['temperature_units'])
+    elif index == 'dsm':
+        return 'Elevation ({})'.format(kwargs['elevation_units'])
+    else:
+        return index
+
+
+def mask_index(band, index):
+    #nodata = band.mask
+    valid = np.ma.masked_invalid(band)
+    valid = np.ma.masked_outside(valid, ranges[index][0],ranges[index][1])
+    #mask = nodata | invalid | outside
+    
+    return valid
 
 
 equations = {
     'ndvi': gen_ndvi,
     'ndre': gen_ndre,
     'thermal': gen_thermal,
+    'dsm': gen_dsm,
     'gndvi': gen_gndvi,
     'endvi': gen_endvi,
     'savi': gen_savi,
@@ -210,6 +238,7 @@ equations = {
     'vari': gen_vari,
     'gdi': gen_gdi,
     'dvi': gen_dvi
+    
 }
 
 
@@ -245,101 +274,7 @@ colormaps = {
 bandNames = ['blue', 'green', 'red', 'nir', 'red_edge', 'lwir']
 
 
-def split_stack(filename):  # untested, but shouldn't be necessary
-    """
-    split_stack: splits a stacked .tif file into individual .tif files with 1 band each
-    Params:
-    :param filename: string of file location
-    returns:
-    :return: list of output filepaths
-    """
-    base = gdal.Open(filename)
-    trans = base.GetGeoTransform()
-    projection = base.GetProjection()
-    data = base.ReadAsArray()
-    rows, cols = data[0].shape
-    options = ['PROFILE=GeoTIFF']
-    driver = gdal.GetDriverByName('GTiff')
-    names = []
-    for band, num in zip(data, range(data.shape[0])):
-        outputname = filename[:filename.index('.tif')]+'_'+str(num)+'.tif'
-        names.append(outputname)
-        out = driver.Create(outputname, cols, rows, 1, gdal.GDT_Byte, options=options)
-        out.SetGeoTransform(trans)
-        out.SetProjection(projection)
-        out.GetRasterBand(1).WriteArray(band)
-        print('saving...')
-        out.FlushCache()
-        del out
-    return names
 
-"""
-FUNCTION NO LONGER USED OR MAINTAINED:
-def generate_from_separate(files, indexlist, outputpath, outputbase):  # functional, but shouldn't be necessary
-
-    data = []
-    names = []
-    driver = gdal.GetDriverByName('GTiff')
-    projection, geotrans = None, None
-    cols, rows = None, None
-    for file, i in zip(files, range(len(files))):
-        tif = gdal.Open(file)
-        geotrans = tif.GetGeoTransform()
-        print('transform: ', geotrans)
-        projection = tif.GetProjection()
-        print('projection: ', projection)
-        temp = tif.ReadAsArray()
-        temp = np.array(temp, dtype='float32')
-        temp = np.ma.masked_where(temp == -10000, temp)
-        data.append(temp)
-        print(np.min(data[-1]), np.max(data[-1]),np.mean(data[-1]))
-        print('filename:', file)
-
-        print('shape:', data[-1].shape)
-        rows, cols = temp.shape
-        del tif
-    bands = dict()
-
-    for band, i in zip(bandNames, range(len(bandNames))):
-        bands[band] = data[i]
-
-    for index in indexlist:
-        indexdata = equations[index](bands)
-        print('beginning colormap stuff...')
-        v = cm.get_cmap(colormaps[index], 256)
-
-        masked = np.ma.masked_invalid(indexdata)
-        print('minmax:', np.min(masked), np.max(masked))
-        adj, mn, mx = normalize(masked)
-        c = v(adj)
-        print(c.shape)
-        c = np.transpose(c, (2, 0, 1))
-        print(c.shape)
-        c *= 255
-        c = c.astype(int)
-        print(np.min(c[0]), np.max(c[0]), np.mean(c[0]))
-        print('minmax:',mn,mx)
-        norm = colors.Normalize(vmin=mn,vmax=mx)
-        fig, ax = plt.subplots(figsize=(1, 6),constrained_layout=True)
-        cb = cbar.ColorbarBase(ax, v, norm)
-        cb.set_label(index.upper(), rotation=90)
-
-        scalename = os.path.join(outputpath, outputbase + '_'+index+'_scale.png')
-        fig.savefig(scalename)
-        print('ending colormap stuff...')
-        outputname = os.path.join(outputpath, outputbase + '_'+index+'.tif')
-        names.append(outputname)
-        options = ['PHOTOMETRIC=RGB', 'PROFILE=GeoTIFF']
-        out = driver.Create(outputname, cols, rows, 4, gdal.GDT_Byte, options=options)
-        out.SetGeoTransform(geotrans)
-        out.SetProjection(projection)
-        for band, i in zip(c, range(1,5)):
-            out.GetRasterBand(i).WriteArray(band)
-        print('saving...')
-        out.FlushCache()
-        del out
-    return names
-"""
 
 def diagnose(file, band=None, mask=None, **kwargs):
     """
@@ -359,129 +294,8 @@ def diagnose(file, band=None, mask=None, **kwargs):
         a = d.ReadAsArray()
     if mask is not None:
         a = np.ma.masked_where(a <= mask,a)
-    plt.imshow(a, kwargs)
+    plt.imshow(a, **kwargs)
     return a
-
-
-def generate_from_stack(file, indexdict, outputpath, outputbase, colormap=True, units='F', L=0.25):  # units can be F or C. units only used for thermal, L only used for SAVI
-    #TODO: add max size parameter
-    """
-    generate_from_stack: generates multispectral indices from a stacked .tif file
-    Params:
-    :param file: string of source file location
-    :param indexdict: dict of {index: colormap} where colormap is a string of the matplotlib colormap to use. Alternatively, a list of
-    index names as strings, where the colormaps will default to those defined in colormaps. example: {'ndvi':'Spectral'} or ['ndvi']
-    :param outputpath: string directory to output the output files into
-    :param outputbase: name to add the index name and .tif into. example: outputbase = 'test_file', indexdict = ['ndvi']. ndvi file name output: 'test_file_ndvi.tif'
-    :param colormap: bool. If true, outputfiles are 4-band RGBA images with colormaps defined in indexdict. If false, single-band tif which can be colormapped later
-    :param units: string 'F' or 'C'. Only used if 'thermal' is in indexdict. If 'F', units of thermal map are Fahrenheit, else Celsius
-    :param L: float between -1 and 1. Only used if 'savi' is in indexdict. is passed to gen_savi as L parameter.
-    returns:
-    :return: list of output filepaths where for each file, list item is [file_path, color_map_key] and if colormap is False, [file_path, None]
-    """
-    try:
-        indexlist = indexdict.keys()
-    except AttributeError:
-        indexlist = indexdict
-        indexdict = colormaps
-    start_time = dt.now()
-    print('stack analysis started at ', start_time)
-    base = gdal.Open(file)
-    trans = base.GetGeoTransform()
-    projection = base.GetProjection()
-    data = base.ReadAsArray()
-    rows,cols = data[0].shape
-    names = []
-    bands = dict()
-    driver = gdal.GetDriverByName('GTiff')
-    for band, i in zip(bandNames, range(len(bandNames))):
-        temp = data[i]
-        temp = np.array(temp, dtype='float32')
-        temp = np.ma.masked_where(temp == -10000, temp)
-        bands[band] = temp
-        del temp
-    bands = mask_zeros(bands)
-    for index in indexlist:
-        print('beginning analysis on',index,'...')
-
-        if index in equations.keys():
-            if index == 'savi':
-                indexdata = equations[index](bands, L)
-            else:
-                indexdata = equations[index](bands)
-
-            if index == 'thermal':
-                if units == 'F':
-                    indexdata = indexdata*9 / 5 + 32
-                    label = 'Temperature (' + u'\N{DEGREE SIGN}' + 'F)'
-                else:
-                    label = 'Temperature (' + u'\N{DEGREE SIGN}' + 'C)'
-            else:
-                label = index.upper()
-
-            masked = np.ma.masked_invalid(indexdata)
-            #print(masked.shape)
-            outputname = os.path.join(outputpath, outputbase + '_' + index + '.tif')
-            if colormap:
-                print('beginning colormap stuff...')
-                try:
-                    v = cm.get_cmap(indexdict[index], 256)
-                except ValueError:
-                    v = cm.get_cmap(colormaps[index], 256)
-                    print('invalid colormap. using default from colormaps')
-                print('minmax:', np.min(masked), np.max(masked))
-
-                masked = np.ma.masked_outside(masked, ranges[index][0], ranges[index][1])
-                adj, mn, mx = normalize(masked)
-                #experimental:
-                if index != 'thermal':
-                    mn, mx = ranges[index]
-                print('acceptable minmax:', ranges[index][0], ranges[index][1])
-                print('new minmax:', mn, mx)
-                c = v(adj)
-                #print(c.shape)
-                c = np.transpose(c, (2, 0, 1))
-                #print(c.shape)
-                c *= 255
-                c = c.astype(int)
-
-                norm = colors.Normalize(vmin=mn,vmax=mx)
-
-                fig, ax = plt.subplots(figsize=(1, 6), constrained_layout=True)
-                plt.close()
-                cb = cbar.ColorbarBase(ax, v, norm)
-
-                cb.set_label(label=label, rotation=90)
-
-                scalename = os.path.join(outputpath, outputbase + '_'+index+'_scale.png')
-                fig.savefig(scalename)
-                print('ending colormap stuff...')
-
-                names.append([outputname, scalename])
-                options = ['GTIFF_FORCE_RGBA=YES', 'PROFILE=GeoTIFF']
-                out = driver.Create(outputname, cols, rows, 4, gdal.GDT_Byte, options=options)
-                out.SetGeoTransform(trans)
-                out.SetProjection(projection)
-                for band, i in zip(c, range(1, 5)):
-                    out.GetRasterBand(i).WriteArray(band)
-                    #out.GetRasterBand(i).SetColorInterpretation(RGBA_INTERPS[i-1])
-                print('saving...')
-                out.FlushCache()
-            else:
-                names.append([outputname, None])
-                options = ['PROFILE=GeoTIFF']
-                out = driver.Create(outputname, cols, rows, 1, gdal.GDT_Float32, options=options)
-                out.GetRasterBand(1).WriteArray(masked.filled(-10000))
-                print('saving...')
-                out.FlushCache()
-
-            del out
-        else:
-            print('invalid key:',index,'; ignoring...')
-    end_time = dt.now()
-    print('stack analysis ended at ', end_time)
-    print('total time to analyze:', end_time - start_time)
-    return names
 
 
 def gen_rgb(file, outputpath, outputbase):
@@ -664,18 +478,6 @@ def resize_tif(src, destdir, destname, resize_factor, del_orig=False):
     return outputname
 
 
-#  TESTS
-def tifs_from_stack_output(input_list):
-    """
-    tifs_from_stack_output: returns a list of all .tif files generated from generate_from_stack or test_all output.
-    Params:
-    :param input_list: generate_from_stack or test_all output
-    returns:
-    :return: list of all .tif files inside input_list
-    """
-    return [item[0] for item in input_list if '.tif' in item[0]]
-
-
 def resize_tif_list(filenames, destpath, suffix, resize_factor, del_orig=False):
     """
     resize_tif_list: resizes all .tifs in the list of any size by a factor
@@ -689,114 +491,4 @@ def resize_tif_list(filenames, destpath, suffix, resize_factor, del_orig=False):
     :return: list of full filepaths of output images
     """
     return [resize_tif(fname, destpath, os.path.split(fname)[-1][:-4] +'_'+ suffix, resize_factor, del_orig=del_orig) for fname in filenames]
-        
-    
-def test_all(src, destname):
-    """
-    test_all: generates color and single-band .tifs for a given input file for all indices
-    Params:
-    :param src: string of input file location
-    :param destname: directory to place output into
-    returns:
-    :return: list of filepaths in format specified in generate_from_stack()
-    """
-    names = []
-    names.extend(test_color(src, destname+'color'))
-    print('DONE WITH COLOR TEST ####################################################')
-    names.extend(test_no_color(src, destname+'no_color'))
-    return names
 
-def test_color(src, destname):
-    """
-    test_color: generates color .tifs for a given input file for all indices
-    Params:
-    :param src: string of input file location
-    :param destname: directory to place output into
-    returns:
-    :return: list of filepaths in format specified in generate_from_stack()
-    """
-    return generate_from_stack(src, colormaps,
-                               os.getcwd(), destname, units='C')  # does a test of all indices
-
-
-def test_no_color(src, destname):
-    """
-    test_no_color: generates monochrome .tifs for a given input file for all indices
-    Params:
-    :param src: string of input file location
-    :param destname: directory to place output into
-    returns:
-    :return: list of filepaths in format specified in generate_from_stack()
-    """
-    return generate_from_stack(src, colormaps,
-                               os.getcwd(), destname, units='C',
-                               colormap=False)  # does a test of all indices
-
-
-def test_specific_colored(src, destname, indices):
-    """
-    test_specific_colored: generates color .tifs for a given input file and a given indexdict
-    Params:
-    :param src: string of input file location
-    :param destname: directory to place output into
-    :param indices: indexdict as defined in generate_from_stack()
-    returns:
-    :return: list of filepaths in format specified in generate_from_stack()
-    """
-    return generate_from_stack(src, indices,
-                               os.getcwd(), destname, units='C')  # does a test of all indices
-
-
-def test_specific_no_color(src, destname, indices):
-    """
-    test_specific_color: generates monochrome .tifs for a given input file and a given indexdict
-    Params:
-    :param src: string of input file location
-    :param destname: directory to place output into
-    :param indices: indexdict as defined in generate_from_stack()
-    returns:
-    :return: list of filepaths in format specified in generate_from_stack()
-    """
-    return generate_from_stack(src, indices,
-                               os.getcwd(), destname, units='C',
-                               colormap=False)  # does a test of all indices
-
-
-def test_specific_all(src, destname, indices):
-    """
-    test_specific_all: generates color and monochrome .tifs for a given input file and a given indexdict
-    Params:
-    :param src: string of input file location
-    :param destname: directory to place output into
-    :param indices: indexdict as defined in generate_from_stack()
-    returns:
-    :return: list of filepaths in format specified in generate_from_stack()
-    """
-    names = []
-    names.extend(test_specific_colored(src, destname+'color', indices))
-    print('DONE WITH COLOR TEST ####################################################')
-    names.extend(test_specific_no_color(src, destname+'no_color', indices))
-    return names
-
-
-if __name__ == '__main__':
-    #  example of how to call generate_from_stack:
-    #  fnames = generate_from_stack('test_ortho.tif',
-    #                               {'thermal':'CMRmap','ndvi':'gnuplot2','ndre':'Spectral'},
-    #                               os.getcwd(), 'test_colored', units='C')
-    #  example of how to call gen_rgb to make an rgb orthomosaic:
-    #  rgb = gen_rgb('test_ortho.tif', os.getcwd(),'test')
-    #  example of how to call colormap_tif to make a colormapped dsm:
-    #  dsmname = colormap_dsm('test_dem.tif', os.getcwd(), 'test1')
-    #indices = ['savi']
-    #test_specific_all(indices)
-    #test_color()
-    ortho_resized = resize_tif('Blenheim/blenheim_oct_6_19_ortho.tif', 'Blenheim','blenheim_ortho_resized', 0.25, False)
-    a = test_all('Blenheim/blenheim_ortho_resized.tif','Blenheim/Blenheim_test_pre_resized')
-    #a=[['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_ndvi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_ndvi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_ndre.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_ndre_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_thermal.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_thermal_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gndvi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gndvi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_endvi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_endvi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_savi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_savi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gli.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gli_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_vari.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_vari_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gdi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_gdi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_dvi.tif', 'C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testcolor_dvi_scale.png'], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_ndvi.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_ndre.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_thermal.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_gndvi.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_endvi.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_savi.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_gli.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_vari.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_gdi.tif', None], ['C:\\Users\\Isaac Miller\\Documents\\GitHub\\aerial-multispectral-app2\\Blenheim/Blenheim_testno_color_dvi.tif', None]]
-    #gen_rgb('Blenheim/blenheim_oct_6_19_ortho.tif','Blenheim','test')
-    #print(resize_tif('Blenheim/test_rgb.tif',
-               #'Blenheim/test_rgb_resampled',0.1))
-    #b = resize_tif_list(tifs_from_stack_output(a),'Blenheim','resized',0.1, True)
-    #print(b)
-    pass
