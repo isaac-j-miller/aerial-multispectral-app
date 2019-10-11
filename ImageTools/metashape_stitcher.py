@@ -73,6 +73,7 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
     t = ig.elapsed('camera optimization', t)
     print('building depth maps...')
     chunk.buildDepthMaps(quality=Metashape.MediumQuality, filter=Metashape.AggressiveFiltering)
+    t = ig.elapsed('depth map construction', t)
     doc.save()
     print('building dense cloud...')
     chunk.buildDenseCloud()
