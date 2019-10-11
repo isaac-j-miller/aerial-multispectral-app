@@ -1,0 +1,3 @@
+matching photos: CPU 52%, GPU 97%
+aligning, optimizing cameras: CPU 94%, GPU idle
+depth map, dense cloud, model, UV, texture: CPU 100%, GPU idle

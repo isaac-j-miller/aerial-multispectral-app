@@ -89,6 +89,7 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
     doc.save()
     print('building texture...')
     chunk.buildTexture(blending=Metashape.MosaicBlending, size=4096)
+    t = ig.elapsed('texture construction', t)
     print('saving...')
     doc.save()
     print('building dsm...')
