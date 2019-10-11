@@ -490,3 +490,9 @@ def resize_tif_list(filenames, destpath, suffix, resize_factor, del_orig=False):
     """
     return [resize_tif(fname, destpath, os.path.split(fname)[-1][:-4] +'_'+ suffix, resize_factor, del_orig=del_orig) for fname in filenames]
 
+
+def elapsed(text, t):
+    now = dt.now()
+    delta = now - t
+    print('{} done in {} seconds ({})'.format(text, delta.total_seconds(), delta))
+    return now

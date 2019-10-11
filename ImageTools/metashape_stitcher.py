@@ -1,8 +1,9 @@
 import Metashape, os, glob, shutil
+from ImageTools import index_generator as ig
 from datetime import datetime as dt
 LICENSE = 'TXC3V-LUVCT-E1BLK-U83UR-GP25H'  # 30-day temporary license. Will expire Nov. 1, 2019.
-CALIB_CSV = 'RP04-1908203-SC.csv'  # Calibration data for Aerial Multispectral Imagery panel
-TEST_CALIB_CSV = 'RP04-1808099-SC.csv'  # Calibration data for example altum dataset
+CALIB_CSV = 'ImageTools/RP04-1908203-SC.csv'  # Calibration data for Aerial Multispectral Imagery panel
+TEST_CALIB_CSV = 'ImageTools/RP04-1808099-SC.csv'  # Calibration data for example altum dataset
 PATH = 't_project'
 
 
@@ -21,8 +22,10 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
     :return: list of output files as [digital surface model name, stacked orthomosaic name]
     """
     start_time = dt.now()
+    t = start_time
     print('stitch started at ', start_time)
     bands = []
+    print('finding images...')
     for i in range(len(available_bands)):
         print('finding images for', available_bands[i], 'band...')
         bands.append(glob.glob(os.path.join(main_dir, '***', 'IMG_****_'+str(i+1)+'.tif')))
@@ -34,7 +37,7 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
         print('invalid or expired license')
         raise PermissionError(
             'Invalid or expired license. Please call the function with license= a valid Metashape license')
-
+    t = ig.elapsed('image search', t)
     doc = Metashape.Document()
     doc.save(temp_path+'.psx')
     doc.read_only = False
@@ -46,10 +49,11 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
     images = list(zip(*bands))
     print('adding photos...')
     chunk.addPhotos(images, Metashape.MultiplaneLayout)
+    t = ig.elapsed('add photos', t)
     print('matching photos...')
     chunk.matchPhotos(accuracy=Metashape.HighAccuracy, generic_preselection=True,
                       reference_preselection=False)
-
+    t = ig.elapsed('image matching', t)
     if calib_csv is not None:  # if there is the necessary calibration data
         print('locating reflectance panels...')
         chunk.locateReflectancePanels()
@@ -57,32 +61,39 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
         chunk.loadReflectancePanelCalibration(calib_csv)
         print('calibrating reflectance...')
         chunk.calibrateReflectance()
+        t = ig.elapsed('reflectance calibration', t)
 
     print('aligning cameras...')
     chunk.alignCameras()
+    t = ig.elapsed('camera alignment', t)
     doc.save()
     print('optimizing cameras...')
     chunk.optimizeCameras()
     doc.save()
+    t = ig.elapsed('camera optimization', t)
     print('building depth maps...')
     chunk.buildDepthMaps(quality=Metashape.MediumQuality, filter=Metashape.AggressiveFiltering)
     doc.save()
     print('building dense cloud...')
     chunk.buildDenseCloud()
     doc.save()
+    t = ig.elapsed('dense cloud construction', t)
     print('building model...')
     chunk.buildModel(surface=Metashape.Arbitrary, interpolation=Metashape.EnabledInterpolation)
+    t = ig.elapsed('model construction', t)
     doc.save()
     print('building UV...')
     chunk.buildUV(mapping=Metashape.GenericMapping)
+    t = ig.elapsed('UV construction', t)
     doc.save()
     print('building texture...')
     chunk.buildTexture(blending=Metashape.MosaicBlending, size=4096)
     print('saving...')
     doc.save()
-    print('building dem...')
+    print('building dsm...')
     chunk.buildDem(source=Metashape.DenseCloudData, interpolation=Metashape.EnabledInterpolation)
-    print('exporting dem...')
+    t = ig.elapsed('dsm constructed', t)
+    print('exporting dsm...')
     demname = os.path.join(output_dir, basename+'_dsm.tif')
     chunk.exportDem(demname,
                     format=Metashape.RasterFormatTiles,
@@ -90,9 +101,10 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
                     raster_transform=Metashape.RasterTransformNone,
                     projection=chunk.crs,
                     tiff_big=True)
-
+    t = ig.elapsed('dsm export', t)
     print('building orthomosaic...')
     chunk.buildOrthomosaic(surface=Metashape.ModelData, blending=Metashape.MosaicBlending)
+    t = ig.elapsed('orthomosaic construction', t)
     doc.save()
     print('exporting orthomosaic...')
     orthoname = os.path.join(output_dir, basename+'_ortho.tif')
@@ -103,6 +115,7 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
                             raster_transform=Metashape.RasterTransformNone,
                             tiff_big=True,
                             white_background=False)
+    t = ig.elapsed('orthomosaic export', t)
     names = [demname, orthoname]
     doc.clear()
     app.quit()
@@ -112,6 +125,7 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
         shutil.rmtree(temp_path+'.files', True)
     except OSError or PermissionError:
         print('permission denied. Please delete', temp_path, '.files')
+    t = ig.elapsed('junk removal', t)
     print('stitch ended at ', end_time)
     print('total time to stitch:', end_time-start_time)
     return names
