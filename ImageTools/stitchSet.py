@@ -9,6 +9,7 @@ from datetime import datetime as dt
 from PIL import Image
 import ImageTools.index_generator as ig
 
+
 class StitchSet():
     def __init__(self, ortho_file, dsm_file, band_order=ig.bandNames,
                  output_directory='.', output_base='', 
@@ -44,6 +45,10 @@ class StitchSet():
         self.kwargs.update(**kwargs)
         return self.kwargs
         
+    def generateIndex(self, index, **kwargs):
+        kwargs = self.updateKwargs(**kwargs)
+        self._indices[index] = ig.equations[index](self._bands, **kwargs)
+        
     def generateIndices(self, indices, **kwargs):
         kwargs = self.updateKwargs(**kwargs)
         self._indices.update({index:ig.equations[index](self._bands, **kwargs) for index in indices})
@@ -52,11 +57,17 @@ class StitchSet():
         if index not in self._indices.keys():
             self.generateIndices([index], **self.kwargs)
     
-    def exportRGBAImage(self):
+    def exportRGBAImage(self, mean_value=40):
         mask = self._bands['red'].mask
-        alpha = np.ma.masked_array(np.full(mask.shape, 65535), mask=mask).filled(0)
-        bands = np.stack((self._bands['red'], self._bands['green'], self._bands['blue'],alpha))
+        alpha = np.ma.masked_array(np.full(mask.shape, 255), mask=mask).filled(0)
+        bands = np.stack((self._bands['red'], self._bands['green'], self._bands['blue']))
         bands = bands.astype(float)*255.0/65535.0
+        if mean_value is not None:
+            masked = np.stack([np.ma.masked_array(band, mask) for band in bands])
+            mean = masked.mean()
+            print('mean:', mean)
+            bands*=mean_value/mean
+        bands = np.stack((bands[0], bands[1], bands[2], alpha))
         tif_path = os.path.join(self._output_directory, '{}_rgba.tif'.format(self._output_base))
         return self.saveColorGeoTiff(bands, tif_path)
     

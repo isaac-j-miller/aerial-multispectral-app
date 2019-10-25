@@ -26,10 +26,12 @@ def stitch(main_dir, available_bands, basename, output_dir, license=LICENSE, tem
     print('stitch started at ', start_time)
     bands = []
     print('finding images...')
+    imageCount = 0
     for i in range(len(available_bands)):
         print('finding images for', available_bands[i], 'band...')
         bands.append(glob.glob(os.path.join(main_dir, '***', 'IMG_****_'+str(i+1)+'.tif')))
-        print(bands[-1])
+        imageCount += len(bands[-1])
+    print('total images:',imageCount)
     app = Metashape.Application()
     if not app.activated:
         Metashape.License().activate(license_key=license)
